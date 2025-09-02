@@ -1,0 +1,9 @@
+
+{
+    "name": "LibreView Glucose Monitor",
+    "description": "Displays the latest glucose reading from LibreView.",
+    "uuid": "libreview-indicator@jdelacasa.github.io",
+    "shell-version": [ "45", "46", "48" ],
+    "url": "https://github.com/jdelacasa/libreview-gnome-extension",
+    "settings-schema": "org.gnome.shell.extensions.libreview-indicator"
+}
