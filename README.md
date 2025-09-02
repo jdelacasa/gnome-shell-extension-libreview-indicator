@@ -5,7 +5,7 @@ A simple GNOME Shell extension to display the latest glucose reading from your L
 
    
    
-![](./screenshoot.png "Get it on GNOME Extensions")
+![](https://github.com/jdelacasa/gnome-shell-extension-libreview-indicator/blob/main/screenshot.png "Get it on GNOME Extensions")
 ---
 
 ### 🧰 Features:
