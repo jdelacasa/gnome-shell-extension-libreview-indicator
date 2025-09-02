@@ -3,6 +3,7 @@ A simple GNOME Shell extension to display the latest glucose reading from your L
 
 ![](https://raw.githubusercontent.com/andyholmes/gnome-shell-extensions-badge/eb9af9a1c6f04eb060cb01de6aeb5c84232cd8c0/get-it-on-ego.svg?sanitize=true "Get it on GNOME Extensions")
 
+<img src="https://raw.githubusercontent.com/andyholmes/gnome-shell-extensions-badge/eb9af9a1c6f04eb060cb01de6aeb5c84232cd8c0/get-it-on-ego.svg?sanitize=true" alt="drawing" width="40"/>
    
    
 ![](https://github.com/jdelacasa/gnome-shell-extension-libreview-indicator/blob/main/screenshot.png "Get it on GNOME Extensions")
