@@ -5,11 +5,7 @@ A simple GNOME Shell extension to display the latest glucose reading from your L
 
    
    
-|Screenshot|
-
-.. |Screenshot| image:: ./screenshot.png
-  :width: 400
-  :alt: A screenshot of the clipboard manager, showing clipboard history including images
+![](./screenshoot.png "Get it on GNOME Extensions")
 ---
 
 ### 🧰 Features:
