@@ -108,4 +108,8 @@ export class LibreViewClient {
         }
         return API_URL;
     }
+
+    destroy() {
+        this._session.abort();
+    }
 }

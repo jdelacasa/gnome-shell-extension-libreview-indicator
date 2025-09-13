@@ -45,6 +45,11 @@ export default class LibreViewExtension extends Extension {
             this._timer = null;
         }
 
+        if (this._client) {
+            this._client.destroy();
+            this._client = null;
+        }
+
         for (const signal of this._settingsChangedSignals) {
             this._settings.disconnect(signal);
         }
