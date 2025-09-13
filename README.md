@@ -7,7 +7,7 @@ A simple GNOME Shell extension to display the latest glucose reading from your L
 <img src="https://github.com/jdelacasa/gnome-shell-extension-libreview-indicator/blob/main/screenshot.png" alt="drawing" width="400"/>
    
 
-    &gt; This extension is not affiliated, funded, or in any way associated with LibreView.
+    > This extension is not affiliated, funded, or in any way associated with LibreView.
 
 ---
 
