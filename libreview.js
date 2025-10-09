@@ -33,7 +33,7 @@ export class LibreViewClient {
         const url = this._getBaseUrl() + '/llu/auth/login';
         const message = Soup.Message.new('POST', url);
         message.request_headers.append('product', 'llu.android');
-        message.request_headers.append('version', '4.12.0');
+        message.request_headers.append('version', '4.16.0');
         message.request_headers.append('User-Agent', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36');
         const payload = JSON.stringify({
             email: this._email,
@@ -85,7 +85,7 @@ export class LibreViewClient {
         const url = this._getBaseUrl() + '/llu/connections';
         const message = Soup.Message.new('GET', url);
         message.request_headers.append('product', 'llu.android');
-        message.request_headers.append('version', '4.12.0');
+        message.request_headers.append('version', '4.16.0');
         message.request_headers.append('User-Agent', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36');
         message.request_headers.append('Authorization', `Bearer ${this._token}`);
         if (this._hashedAccountId) {
