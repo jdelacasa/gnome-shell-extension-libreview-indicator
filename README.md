@@ -2,7 +2,7 @@
 A simple GNOME Shell extension to display the latest glucose reading from your LibreView account directly on the panel.
 
 
-<a href="https://extensions.gnome.org/extension/779/clipboard-indicator/"><img src="https://raw.githubusercontent.com/andyholmes/gnome-shell-extensions-badge/eb9af9a1c6f04eb060cb01de6aeb5c84232cd8c0/get-it-on-ego.svg?sanitize=true" alt="drawing" width="150"/></a>
+<a href="https://extensions.gnome.org/extension/8575/libreview-glucose-monitor/"><img src="https://raw.githubusercontent.com/andyholmes/gnome-shell-extensions-badge/eb9af9a1c6f04eb060cb01de6aeb5c84232cd8c0/get-it-on-ego.svg?sanitize=true" alt="drawing" width="150"/></a>
    
 <img src="https://github.com/jdelacasa/gnome-shell-extension-libreview-indicator/blob/main/screenshot.png" alt="drawing" width="400"/>
    
