@@ -3,7 +3,7 @@
     "name": "LibreView Glucose Monitor",
     "description": "Displays the latest glucose reading from LibreView.\n\nThis extension is not affiliated, funded, or in any way associated with LibreView.",
     "uuid": "libreview-indicator@jdelacasa.github.io",
-    "shell-version": [ "45", "46", "48" ],
+    "shell-version": [ "45", "46", "48", "49" ],
     "url": "https://github.com/jdelacasa/gnome-shell-extension-libreview-indicator",
     "settings-schema": "org.gnome.shell.extensions.libreview-indicator"
 }
