@@ -1,4 +1,3 @@
-
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
   <schema id="org.gnome.shell.extensions.libreview-indicator" path="/org/gnome/shell/extensions/libreview-indicator/">
@@ -13,6 +12,14 @@
     <key name="update-frequency" type="i">
       <default>300</default>
       <summary>Update frequency in seconds</summary>
+    </key>
+    <key name="unit" type="s">
+      <choices>
+        <choice value="mg/dL" />
+        <choice value="mmol/L" />
+      </choices>
+      <default>"mg/dL"</default>
+      <summary>Unit of measurement for blood glucose</summary>
     </key>
   </schema>
 </schemalist>

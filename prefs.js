@@ -3,6 +3,12 @@ import Gio from 'gi://Gio';
 import Gtk from 'gi://Gtk';
 import { ExtensionPreferences } from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
+function getStringChoicesFromSchema(settings, keyName) {
+    const key = settings.settings_schema.get_key(keyName);
+    const [, choices] = key.get_range().recursiveUnpack();
+    return choices;
+}
+
 export default class LibreViewPreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
         const settings = this.getSettings();
@@ -33,6 +39,27 @@ export default class LibreViewPreferences extends ExtensionPreferences {
             }),
         });
         group.add(frequencyRow);
+
+        const unitValues = getStringChoicesFromSchema(settings, 'unit');
+        const unitRow = new Adw.ComboRow({
+            title: 'Unit',
+            subtitle: 'Unit of measurement for blood glucose.',
+            model: new Gtk.StringList({ strings: unitValues }),
+        });
+        group.add(unitRow);
+
+        const initialUnitIndex = unitValues.indexOf(settings.get_string('unit'));
+        unitRow.set_selected(initialUnitIndex);
+
+        unitRow.connect('notify::selected', row => {
+            const selectedUnit = unitValues[row.get_selected()];
+            settings.set_string('unit', selectedUnit);
+        });
+
+        settings.connect('changed::unit', () => {
+            const idx = unitValues.indexOf(settings.get_string('unit'));
+            unitRow.set_selected(idx);
+        });
 
         window.add(page);
 
