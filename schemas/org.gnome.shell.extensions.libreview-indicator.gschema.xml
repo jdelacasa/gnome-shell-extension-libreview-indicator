@@ -1,4 +1,3 @@
-
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
   <schema id="org.gnome.shell.extensions.libreview-indicator" path="/org/gnome/shell/extensions/libreview-indicator/">
@@ -19,7 +18,7 @@
         <choice value="mg/dL" />
         <choice value="mmol/L" />
       </choices>
-      <default>"mmol/L"</default>
+      <default>"mg/dL"</default>
       <summary>Unit of measurement for blood glucose</summary>
     </key>
   </schema>
