@@ -14,5 +14,13 @@
       <default>300</default>
       <summary>Update frequency in seconds</summary>
     </key>
+    <key name="unit" type="s">
+      <choices>
+        <choice value="mg/dL" />
+        <choice value="mmol/L" />
+      </choices>
+      <default>"mmol/L"</default>
+      <summary>Unit of measurement for blood glucose</summary>
+    </key>
   </schema>
 </schemalist>

@@ -33,6 +33,7 @@ export default class LibreViewExtension extends Extension {
         this._setTimer();
 
         this._settingsChangedSignals.push(this._settings.connect('changed::update-frequency', () => this._setTimer()));
+        this._settingsChangedSignals.push(this._settings.connect('changed::unit', () => this._updateGlucose()));
     }
 
     disable() {
@@ -59,13 +60,22 @@ export default class LibreViewExtension extends Extension {
 
     async _updateGlucose() {
         if (!this._indicator) return;
-
+        const label = this._indicator.get_first_child();
         try {
             const glucose = await this._client.getLatestGlucose();
-            const trendArrow = TREND_ARROWS[glucose.TrendArrow] || '';
-            this._indicator.get_first_child().set_text(`${trendArrow} ${glucose.ValueInMgPerDl}`);
+            const trendArrow = `${TREND_ARROWS[glucose.TrendArrow]} ` || '';
+            const selectedUnit = this._settings.get_string('unit');
+            let value;
+            if (selectedUnit === 'mmol/L') {
+                value = glucose.Value;
+            } else if (selectedUnit === 'mg/dL') {
+                value = glucose.ValueInMgPerDl;
+            } else {
+                throw new Error(`Unknown unit: ${selectedUnit}`);
+            }
+            label.set_text(`${trendArrow}${value}`);
         } catch (e) {
-            this._indicator.get_first_child().set_text('Error');
+            label.set_text('Error');
             console.error(`LibreView Extension: ${e}`);
         }
     }
