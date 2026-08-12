@@ -67,7 +67,7 @@ export class LibreViewClient {
         throw new Error('Authentication failed: No auth ticket found.');
     }
 
-    async getLatestGlucose() {
+    async getGlucoseData() {
         if (!this._token) {
             await this.authenticate();
         }
@@ -78,7 +78,33 @@ export class LibreViewClient {
         }
 
         const firstConnection = connections[0];
-        return firstConnection.glucoseMeasurement;
+        const graph = await this._getGraph(firstConnection.patientId);
+
+        return {
+            latest: graph.connection ? graph.connection.glucoseMeasurement : firstConnection.glucoseMeasurement,
+            graphData: graph.graphData || [],
+        };
+    }
+
+    async _getGraph(patientId) {
+        const url = this._getBaseUrl() + `/llu/connections/${patientId}/graph`;
+        const message = Soup.Message.new('GET', url);
+        message.request_headers.append('product', 'llu.android');
+        message.request_headers.append('version', '4.16.0');
+        message.request_headers.append('User-Agent', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36');
+        message.request_headers.append('Authorization', `Bearer ${this._token}`);
+        if (this._hashedAccountId) {
+            message.request_headers.append('account-id', this._hashedAccountId);
+        }
+
+        const bytes = await sendAndReadAsync(this._session, message);
+
+        if (message.get_status() !== 200) {
+            throw new Error(`Failed to get graph with status: ${message.get_status()}`);
+        }
+
+        const data = JSON.parse(new TextDecoder().decode(bytes.toArray()));
+        return data.data;
     }
 
     async _getConnections() {

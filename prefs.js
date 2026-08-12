@@ -3,6 +3,8 @@ import Gio from 'gi://Gio';
 import Gtk from 'gi://Gtk';
 import { ExtensionPreferences } from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
+import { LibreViewClient } from './libreview.js';
+
 export default class LibreViewPreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
         const settings = this.getSettings();
@@ -22,6 +24,39 @@ export default class LibreViewPreferences extends ExtensionPreferences {
             show_apply_button: true,
         });
         group.add(passwordRow);
+
+        const testRow = new Adw.ActionRow({ title: 'Test Connection' });
+        const testSpinner = new Gtk.Spinner({ visible: false });
+        const testButton = new Gtk.Button({
+            label: 'Test',
+            valign: Gtk.Align.CENTER,
+            css_classes: ['suggested-action'],
+        });
+        testRow.add_suffix(testSpinner);
+        testRow.add_suffix(testButton);
+        group.add(testRow);
+
+        testButton.connect('clicked', () => {
+            testButton.set_sensitive(false);
+            testSpinner.set_visible(true);
+            testSpinner.start();
+            testRow.set_subtitle('Testing…');
+
+            const client = new LibreViewClient(emailRow.text, passwordRow.text);
+            client.getGlucoseData()
+                .then(data => {
+                    testRow.set_subtitle(`✓ Connected — ${data.latest.ValueInMgPerDl} mg/dL`);
+                })
+                .catch(e => {
+                    testRow.set_subtitle(`✗ ${e.message}`);
+                })
+                .finally(() => {
+                    client.destroy();
+                    testSpinner.stop();
+                    testSpinner.set_visible(false);
+                    testButton.set_sensitive(true);
+                });
+        });
 
         const frequencyRow = new Adw.SpinRow({
             title: 'Update Frequency (seconds)',

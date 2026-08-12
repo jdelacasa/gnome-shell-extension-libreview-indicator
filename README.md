@@ -13,10 +13,18 @@ A simple GNOME Shell extension to display the latest glucose reading from your L
 
 ### 🧰 Features:
 *   **At-a-glance Readings:** See your latest glucose value and trend arrow on the GNOME panel.
+*   **Dropdown Menu:** Click the indicator to open a menu with quick actions instead of an immediate refresh.
+*   **Glucose Graph:** The menu shows a line graph of recent readings, with:
+    *   A fixed 50–350 mg/dL Y axis and intermediate gridline values.
+    *   The X axis scaled by real elapsed time, with the line broken across gaps where sensor readings are missing (>20 min).
+    *   Hover tooltips that follow the mouse and show the exact value and time of the nearest reading.
+*   **Signal Loss Indicator:** If two or more consecutive readings are missing (>30 min without an update), the panel indicator turns red with a ⚠ icon until fresh data arrives.
 *   **Configurable:**
     *   Set your LibreView account credentials securely.
     *   Adjust the data refresh frequency (from 1 minute to 1 hour).
-*   **Click to Refresh:** Manually trigger an update by clicking the indicator.
+    *   **Test Connection** button in preferences to verify credentials work before saving.
+*   **Manage Credentials from the Menu:** Open preferences directly from the dropdown, no need to hunt through the Extensions app.
+*   **Manual Refresh:** Trigger an update on demand from the dropdown menu.
 
 ### 📦 Install from source
 You can install the extension directly from its source code.
