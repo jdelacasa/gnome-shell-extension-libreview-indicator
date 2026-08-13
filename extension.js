@@ -1,5 +1,6 @@
 import St from 'gi://St';
 import GLib from 'gi://GLib';
+import GObject from 'gi://GObject';
 import Clutter from 'gi://Clutter';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
@@ -81,6 +82,15 @@ export default class LibreViewExtension extends Extension {
         const label = new St.Label({ text: 'Loading...', y_expand: true, y_align: Clutter.ActorAlign.CENTER });
         this._indicator.add_child(label);
 
+        const titleItem = new PopupMenu.PopupBaseMenuItem({ reactive: false, can_focus: false });
+        this._graphTitleLabel = new St.Label({
+            text: HISTORY_RANGES.find(r => r.key === this._viewMode)?.label ?? '',
+            x_expand: true,
+            style: 'font-weight: bold; padding: 4px 8px 0 8px;',
+        });
+        titleItem.add_child(this._graphTitleLabel);
+        this._indicator.menu.addMenuItem(titleItem);
+
         const graphItem = new PopupMenu.PopupBaseMenuItem({ reactive: false, can_focus: false });
         this._graphArea = new St.DrawingArea({
             width: GRAPH_WIDTH,
@@ -112,7 +122,12 @@ export default class LibreViewExtension extends Extension {
         for (const range of HISTORY_RANGES) {
             const item = new PopupMenu.PopupMenuItem(range.label);
             item.setOrnament(range.key === this._viewMode ? PopupMenu.Ornament.DOT : PopupMenu.Ornament.NONE);
-            item.connect('activate', () => this._selectHistoryRange(range.key));
+            item.connect('activate', () => {
+                this._selectHistoryRange(range.key);
+                // Selecting a range should update the graph in place, not close
+                // the whole dropdown like a normal menu action would.
+                GObject.signal_stop_emission_by_name(item, 'activate');
+            });
             historySubMenu.menu.addMenuItem(item);
             this._historyMenuItems.set(range.key, item);
         }
@@ -152,6 +167,7 @@ export default class LibreViewExtension extends Extension {
             this._indicator = null;
         }
         this._historyMenuItems = null;
+        this._graphTitleLabel = null;
         this._viewMode = 'live';
         this._liveGraphPoints = [];
         this._graphPoints = [];
@@ -187,6 +203,10 @@ export default class LibreViewExtension extends Extension {
             for (const [rangeKey, item] of this._historyMenuItems) {
                 item.setOrnament(rangeKey === key ? PopupMenu.Ornament.DOT : PopupMenu.Ornament.NONE);
             }
+        }
+
+        if (this._graphTitleLabel) {
+            this._graphTitleLabel.set_text(HISTORY_RANGES.find(r => r.key === key)?.label ?? '');
         }
 
         await this._loadHistoryRange(key);
@@ -343,17 +363,19 @@ export default class LibreViewExtension extends Extension {
             return GRAPH_PADDING_TOP + plotHeight - ((clamped - min) / range) * plotHeight;
         };
 
+        // Target range: used both for the background band and to color the
+        // line red wherever readings fall below the minimum.
+        const hasTargetRange = !!this._settings && this._settings.get_int('target-range-max') > this._settings.get_int('target-range-min');
+        const targetMin = hasTargetRange ? this._settings.get_int('target-range-min') : null;
+        const targetMax = hasTargetRange ? this._settings.get_int('target-range-max') : null;
+
         // Target range band (drawn first, sits behind gridlines and the data line)
-        if (this._settings) {
-            const targetMin = this._settings.get_int('target-range-min');
-            const targetMax = this._settings.get_int('target-range-max');
-            if (targetMax > targetMin) {
-                const yTop = toY(Math.min(max, targetMax));
-                const yBottom = toY(Math.max(min, targetMin));
-                cr.setSourceRGBA(0.2, 0.8, 0.3, 0.15);
-                cr.rectangle(GRAPH_PADDING_LEFT, yTop, plotWidth, yBottom - yTop);
-                cr.fill();
-            }
+        if (hasTargetRange) {
+            const yTop = toY(Math.min(max, targetMax));
+            const yBottom = toY(Math.max(min, targetMin));
+            cr.setSourceRGBA(0.2, 0.8, 0.3, 0.15);
+            cr.rectangle(GRAPH_PADDING_LEFT, yTop, plotWidth, yBottom - yTop);
+            cr.fill();
         }
 
         cr.selectFontFace('sans-serif', 0, 0);
@@ -388,19 +410,33 @@ export default class LibreViewExtension extends Extension {
             cr.showText(label);
         }
 
-        // Line (broken across gaps where readings are missing)
+        // Line (broken across gaps where readings are missing; colored red
+        // wherever a reading falls below the target range minimum)
+        const NORMAL_COLOR = [0.2, 0.7, 0.9, 1];
+        const LOW_COLOR = [0.9, 0.25, 0.25, 1];
+        const setLineColor = below => cr.setSourceRGBA(...(below ? LOW_COLOR : NORMAL_COLOR));
+
         cr.setLineWidth(2);
-        cr.setSourceRGBA(0.2, 0.7, 0.9, 1);
         let penDown = false;
+        let currentBelow = false;
         points.forEach((point, i) => {
             const x = toX(i);
             const y = toY(point.value);
             const gapBefore = i > 0 && (point.time.getTime() - points[i - 1].time.getTime()) / 60000 > gapThresholdMinutes;
+            const isBelow = hasTargetRange && point.value < targetMin;
 
             if (i === 0 || gapBefore) {
                 if (penDown) cr.stroke();
+                setLineColor(isBelow);
                 cr.moveTo(x, y);
+                currentBelow = isBelow;
                 penDown = true;
+            } else if (isBelow !== currentBelow) {
+                cr.lineTo(x, y);
+                cr.stroke();
+                setLineColor(isBelow);
+                cr.moveTo(x, y);
+                currentBelow = isBelow;
             } else {
                 cr.lineTo(x, y);
             }
@@ -410,7 +446,7 @@ export default class LibreViewExtension extends Extension {
         // A single reading has no line to draw — mark it with a dot instead
         // of leaving the axis blank (which would look identical to no data).
         if (points.length === 1) {
-            cr.setSourceRGBA(0.2, 0.7, 0.9, 1);
+            setLineColor(hasTargetRange && points[0].value < targetMin);
             cr.arc(toX(0), toY(points[0].value), 3, 0, 2 * Math.PI);
             cr.fill();
         }
@@ -427,7 +463,7 @@ export default class LibreViewExtension extends Extension {
             cr.lineTo(x, height - GRAPH_PADDING_BOTTOM);
             cr.stroke();
 
-            cr.setSourceRGBA(0.2, 0.7, 0.9, 1);
+            setLineColor(hasTargetRange && point.value < targetMin);
             cr.arc(x, y, 3, 0, 2 * Math.PI);
             cr.fill();
 
