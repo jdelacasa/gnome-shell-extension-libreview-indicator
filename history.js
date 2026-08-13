@@ -43,7 +43,7 @@ export class HistoryStore {
             const [contents] = await this._file.load_contents_async(this._cancellable);
             text = new TextDecoder().decode(contents);
         } catch (e) {
-            if (!e.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.NOT_FOUND)) {
+            if (!e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.NOT_FOUND)) {
                 console.error(`LibreView Extension: history init failed: ${e}`);
             }
             return;
@@ -76,7 +76,7 @@ export class HistoryStore {
 
         const line = `${JSON.stringify({ t: timestampMs, v: value })}\n`;
         this._queue = this._queue.then(() => this._append(line)).catch(e => {
-            if (!e.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED)) {
+            if (!e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED)) {
                 console.error(`LibreView Extension: history append failed: ${e}`);
             }
         });
@@ -98,7 +98,7 @@ export class HistoryStore {
             }
             return entries;
         } catch (e) {
-            if (!e.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.NOT_FOUND)) {
+            if (!e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.NOT_FOUND)) {
                 console.error(`LibreView Extension: history read failed: ${e}`);
             }
             return [];
