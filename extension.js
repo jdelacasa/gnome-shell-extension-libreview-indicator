@@ -107,11 +107,14 @@ export default class LibreViewExtension extends Extension {
     }
 
     disable() {
+        if (this._graphArea) {
+            this._graphArea.destroy();
+            this._graphArea = null;
+        }
         if (this._indicator) {
             this._indicator.destroy();
             this._indicator = null;
         }
-        this._graphArea = null;
         this._graphData = [];
         this._lastPlotData = null;
         this._lastPlotTimes = null;
@@ -164,7 +167,7 @@ export default class LibreViewExtension extends Extension {
         const label = this._indicator.get_first_child();
         if (isStale) {
             label.set_style('color: #e05252; font-weight: bold;');
-            label.set_text('⚠ --');
+            label.set_text('-- (stale)');
         } else {
             label.set_style(null);
         }
