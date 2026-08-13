@@ -18,13 +18,22 @@ A simple GNOME Shell extension to display the latest glucose reading from your L
     *   A fixed 50–350 mg/dL Y axis and intermediate gridline values.
     *   The X axis scaled by real elapsed time, with the line broken across gaps where sensor readings are missing (>20 min).
     *   Hover tooltips that follow the mouse and show the exact value and time of the nearest reading.
-*   **Signal Loss Indicator:** If two or more consecutive readings are missing (>30 min without an update), the panel indicator turns red with a ⚠ icon until fresh data arrives.
+*   **Signal Loss Indicator:** If two or more consecutive readings are missing (>30 min without an update), the panel indicator turns red until fresh data arrives.
+*   **History Range:** Switch the graph between Live (~12h from LibreView), Last 7 Days, Last 30 Days or Last 90 Days, backed by the local history store described below.
 *   **Configurable:**
     *   Set your LibreView account credentials securely.
     *   Adjust the data refresh frequency (from 1 minute to 1 hour).
     *   **Test Connection** button in preferences to verify credentials work before saving.
 *   **Manage Credentials from the Menu:** Open preferences directly from the dropdown, no need to hunt through the Extensions app.
 *   **Manual Refresh:** Trigger an update on demand from the dropdown menu.
+
+### Local history (disk usage disclosure)
+This extension stores glucose readings locally so you can query history beyond the short
+window returned by the LibreView API. Data is written **only** to
+`~/.local/share/<uuid>/history.jsonl` (your own `XDG_DATA_HOME`), in a directory created
+with permissions `0700`. Nothing is transmitted anywhere except to LibreView's own API
+(already required for the extension to work) — no telemetry, no third-party sync. Entries
+older than 90 days are pruned automatically on each enable.
 
 ### 📦 Install from source
 You can install the extension directly from its source code.
