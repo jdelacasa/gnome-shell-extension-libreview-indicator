@@ -69,10 +69,47 @@ export default class LibreViewPreferences extends ExtensionPreferences {
         });
         group.add(frequencyRow);
 
+        const displayGroup = new Adw.PreferencesGroup({ title: 'Display' });
+        page.add(displayGroup);
+
+        const VIEW_PERIODS = ['live', '7d', '30d', '90d'];
+        const VIEW_PERIOD_LABELS = ['Live (~12h)', 'Last 7 Days', 'Last 30 Days', 'Last 90 Days'];
+        const periodRow = new Adw.ComboRow({
+            title: 'Default View Period',
+            subtitle: 'History range shown when the menu opens',
+            model: Gtk.StringList.new(VIEW_PERIOD_LABELS),
+        });
+        const currentPeriod = VIEW_PERIODS.indexOf(settings.get_string('default-view-period'));
+        periodRow.selected = currentPeriod >= 0 ? currentPeriod : 0;
+        periodRow.connect('notify::selected', () => {
+            settings.set_string('default-view-period', VIEW_PERIODS[periodRow.selected]);
+        });
+        displayGroup.add(periodRow);
+
+        const targetGroup = new Adw.PreferencesGroup({
+            title: 'Target Range',
+            description: 'Highlighted as a green band on the graph.',
+        });
+        page.add(targetGroup);
+
+        const targetMinRow = new Adw.SpinRow({
+            title: 'Minimum (mg/dL)',
+            adjustment: new Gtk.Adjustment({ lower: 50, upper: 350, step_increment: 5 }),
+        });
+        targetGroup.add(targetMinRow);
+
+        const targetMaxRow = new Adw.SpinRow({
+            title: 'Maximum (mg/dL)',
+            adjustment: new Gtk.Adjustment({ lower: 50, upper: 350, step_increment: 5 }),
+        });
+        targetGroup.add(targetMaxRow);
+
         window.add(page);
 
         settings.bind('email', emailRow, 'text', Gio.SettingsBindFlags.DEFAULT);
         settings.bind('password', passwordRow, 'text', Gio.SettingsBindFlags.DEFAULT);
         settings.bind('update-frequency', frequencyRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        settings.bind('target-range-min', targetMinRow, 'value', Gio.SettingsBindFlags.DEFAULT);
+        settings.bind('target-range-max', targetMaxRow, 'value', Gio.SettingsBindFlags.DEFAULT);
     }
 }

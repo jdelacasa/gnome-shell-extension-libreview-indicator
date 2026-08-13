@@ -14,5 +14,23 @@
       <default>300</default>
       <summary>Update frequency in seconds</summary>
     </key>
+    <key name="default-view-period" type="s">
+      <choices>
+        <choice value='live'/>
+        <choice value='7d'/>
+        <choice value='30d'/>
+        <choice value='90d'/>
+      </choices>
+      <default>'live'</default>
+      <summary>Default history range shown when the menu opens</summary>
+    </key>
+    <key name="target-range-min" type="i">
+      <default>70</default>
+      <summary>Target glucose range minimum (mg/dL), highlighted on the graph</summary>
+    </key>
+    <key name="target-range-max" type="i">
+      <default>140</default>
+      <summary>Target glucose range maximum (mg/dL), highlighted on the graph</summary>
+    </key>
   </schema>
 </schemalist>

@@ -50,9 +50,12 @@ function parseLibreTimestamp(ts) {
     return new Date(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10), hour, parseInt(minute, 10));
 }
 
-function formatHourMinute(date) {
+function formatHourMinute(date, includeDate = false) {
     if (!date) return '';
-    return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+    const time = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+    if (!includeDate) return time;
+    const day = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}`;
+    return `${day} ${time}`;
 }
 
 export default class LibreViewExtension extends Extension {
@@ -63,7 +66,8 @@ export default class LibreViewExtension extends Extension {
         this._timer = null;
         this._settingsChangedSignals = [];
 
-        this._viewMode = 'live';
+        const defaultPeriod = this._settings.get_string('default-view-period');
+        this._viewMode = HISTORY_RANGES.some(r => r.key === defaultPeriod) ? defaultPeriod : 'live';
         this._liveGraphPoints = [];
         this._graphPoints = [];
         this._lastPlotData = null;
@@ -121,7 +125,8 @@ export default class LibreViewExtension extends Extension {
 
         this._indicator.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
-        const credentialsItem = new PopupMenu.PopupMenuItem('Manage Credentials…');
+        const credentialsItem = new PopupMenu.PopupBaseMenuItem();
+        credentialsItem.add_child(new St.Icon({ icon_name: 'emblem-system-symbolic', style_class: 'popup-menu-icon' }));
         credentialsItem.connect('activate', () => this.openPreferences());
         this._indicator.menu.addMenuItem(credentialsItem);
 
@@ -129,6 +134,10 @@ export default class LibreViewExtension extends Extension {
 
         this._updateGlucose();
         this._setTimer();
+
+        if (this._viewMode !== 'live') {
+            this._loadHistoryRange(this._viewMode);
+        }
 
         this._settingsChangedSignals.push(this._settings.connect('changed::update-frequency', () => this._setTimer()));
     }
@@ -180,6 +189,10 @@ export default class LibreViewExtension extends Extension {
             }
         }
 
+        await this._loadHistoryRange(key);
+    }
+
+    async _loadHistoryRange(key) {
         if (key === 'live') {
             this._graphPoints = this._liveGraphPoints;
             this._hoverIndex = null;
@@ -250,6 +263,18 @@ export default class LibreViewExtension extends Extension {
         }
     }
 
+    // Live view scales to the actual data extent; history views span the
+    // full requested window regardless of how much of it has real data.
+    _getAxisDomain(dataTMin, dataTMax) {
+        if (this._viewMode === 'live') {
+            return [dataTMin, dataTMax];
+        }
+        const activeRange = HISTORY_RANGES.find(r => r.key === this._viewMode);
+        const tMax = Date.now();
+        const tMin = tMax - (activeRange ? activeRange.days : 1) * 24 * 60 * 60 * 1000;
+        return [tMin, tMax];
+    }
+
     _repaintGraph(area) {
         const cr = area.get_context();
         const [width, height] = area.get_surface_size();
@@ -266,8 +291,15 @@ export default class LibreViewExtension extends Extension {
             points = Array.from({ length: maxPoints }, (_, i) => points[Math.floor(i * step)]);
         }
 
-        if (!points || points.length < 2) {
+        if (!points || points.length === 0) {
             this._lastPlotData = null;
+            cr.selectFontFace('sans-serif', 0, 0);
+            cr.setFontSize(12);
+            cr.setSourceRGBA(1, 1, 1, 0.5);
+            const label = 'No data for this range';
+            const extents = cr.textExtents(label);
+            cr.moveTo((width - extents.width) / 2, height / 2);
+            cr.showText(label);
             cr.$dispose();
             return;
         }
@@ -284,14 +316,24 @@ export default class LibreViewExtension extends Extension {
         const plotWidth = width - GRAPH_PADDING_LEFT - GRAPH_PADDING_RIGHT;
         const plotHeight = height - GRAPH_PADDING_TOP - GRAPH_PADDING_BOTTOM;
 
-        const tMin = points[0].time.getTime();
-        const tMax = points[points.length - 1].time.getTime();
+        // Actual data extent (used only for the gap-detection threshold below).
+        const dataTMin = points[0].time.getTime();
+        const dataTMax = points[points.length - 1].time.getTime();
+        const dataTRange = Math.max(dataTMax - dataTMin, 1);
+
+        // X-axis domain: for history views, span the FULL requested window
+        // (e.g. the whole 30 days) even if real data only covers a sliver of
+        // it — that empty space is the signal that most of the range has no
+        // readings, same as a dropped-connection gap. Live view still scales
+        // to the actual data extent (short LibreView window).
+        const [tMin, tMax] = this._getAxisDomain(dataTMin, dataTMax);
         const tRange = Math.max(tMax - tMin, 1);
+        const includeDateInLabels = this._viewMode !== 'live' || tRange > 12 * 60 * 60 * 1000;
 
         // Downsampled long ranges spread points far apart in time even when the
         // underlying data is continuous; scale the "missing reading" gap threshold
-        // to the actual average spacing instead of a fixed 20 min (live-view scale).
-        const avgSpacingMinutes = (tRange / 60000) / (points.length - 1);
+        // to the actual average spacing of real data (not the axis domain).
+        const avgSpacingMinutes = (dataTRange / 60000) / Math.max(points.length - 1, 1);
         const gapThresholdMinutes = Math.max(GRAPH_GAP_MINUTES, avgSpacingMinutes * 3);
 
         const toXTime = t => GRAPH_PADDING_LEFT + ((t - tMin) / tRange) * plotWidth;
@@ -300,6 +342,19 @@ export default class LibreViewExtension extends Extension {
             const clamped = Math.max(min, Math.min(max, v));
             return GRAPH_PADDING_TOP + plotHeight - ((clamped - min) / range) * plotHeight;
         };
+
+        // Target range band (drawn first, sits behind gridlines and the data line)
+        if (this._settings) {
+            const targetMin = this._settings.get_int('target-range-min');
+            const targetMax = this._settings.get_int('target-range-max');
+            if (targetMax > targetMin) {
+                const yTop = toY(Math.min(max, targetMax));
+                const yBottom = toY(Math.max(min, targetMin));
+                cr.setSourceRGBA(0.2, 0.8, 0.3, 0.15);
+                cr.rectangle(GRAPH_PADDING_LEFT, yTop, plotWidth, yBottom - yTop);
+                cr.fill();
+            }
+        }
 
         cr.selectFontFace('sans-serif', 0, 0);
         cr.setFontSize(10);
@@ -318,13 +373,14 @@ export default class LibreViewExtension extends Extension {
             cr.showText(String(v));
         }
 
-        // X axis: evenly spaced timestamp labels
-        const tickIndices = Array.from({ length: GRAPH_X_TICK_COUNT }, (_, i) =>
-            Math.round((i / (GRAPH_X_TICK_COUNT - 1)) * (points.length - 1)));
-        for (const i of tickIndices) {
-            const label = formatHourMinute(points[i].time);
+        // X axis: labels evenly spaced across the axis DOMAIN (not across the
+        // data points), so a mostly-empty history range still shows a full
+        // set of date/time ticks instead of bunching them where data exists.
+        for (let i = 0; i < GRAPH_X_TICK_COUNT; i++) {
+            const t = tMin + (i / (GRAPH_X_TICK_COUNT - 1)) * tRange;
+            const label = formatHourMinute(new Date(t), includeDateInLabels);
             if (!label) continue;
-            const x = toX(i);
+            const x = toXTime(t);
             const extents = cr.textExtents(label);
             let textX = x - extents.width / 2;
             textX = Math.max(GRAPH_PADDING_LEFT, Math.min(textX, width - GRAPH_PADDING_RIGHT - extents.width));
@@ -351,6 +407,14 @@ export default class LibreViewExtension extends Extension {
         });
         if (penDown) cr.stroke();
 
+        // A single reading has no line to draw — mark it with a dot instead
+        // of leaving the axis blank (which would look identical to no data).
+        if (points.length === 1) {
+            cr.setSourceRGBA(0.2, 0.7, 0.9, 1);
+            cr.arc(toX(0), toY(points[0].value), 3, 0, 2 * Math.PI);
+            cr.fill();
+        }
+
         // Hover crosshair + tooltip
         if (this._hoverIndex !== null && points[this._hoverIndex]) {
             const point = points[this._hoverIndex];
@@ -367,7 +431,7 @@ export default class LibreViewExtension extends Extension {
             cr.arc(x, y, 3, 0, 2 * Math.PI);
             cr.fill();
 
-            const time = formatHourMinute(point.time);
+            const time = formatHourMinute(point.time, includeDateInLabels);
             const label = `${Math.round(point.value)} mg/dL  ${time}`;
             cr.setFontSize(11);
             const extents = cr.textExtents(label);
@@ -399,8 +463,9 @@ export default class LibreViewExtension extends Extension {
         const ratio = (localX - GRAPH_PADDING_LEFT) / plotWidth;
         const clamped = Math.max(0, Math.min(1, ratio));
 
-        const tMin = points[0].time.getTime();
-        const tMax = points[points.length - 1].time.getTime();
+        // Must match the axis domain used in _repaintGraph, not just the data extent,
+        // or hovering over an empty part of a history view would snap to the wrong point.
+        const [tMin, tMax] = this._getAxisDomain(points[0].time.getTime(), points[points.length - 1].time.getTime());
         const targetTime = tMin + clamped * (tMax - tMin);
 
         let idx = 0;

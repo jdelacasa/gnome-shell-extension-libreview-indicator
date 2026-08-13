@@ -1,6 +1,15 @@
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 
+// GJS does not auto-promisify these Gio async pairs; without this, every
+// call below throws a silent TypeError ("At least N arguments required")
+// caught by our own try/catch and logged, so history was never written.
+Gio._promisify(Gio.File.prototype, 'load_contents_async', 'load_contents_finish');
+Gio._promisify(Gio.File.prototype, 'append_to_async', 'append_to_finish');
+Gio._promisify(Gio.File.prototype, 'replace_contents_async', 'replace_contents_finish');
+Gio._promisify(Gio.OutputStream.prototype, 'write_bytes_async', 'write_bytes_finish');
+Gio._promisify(Gio.OutputStream.prototype, 'close_async', 'close_finish');
+
 // Justification (health-data disk usage, see EGO review / README "Local history"):
 // This extension persists glucose readings locally so the user can query
 // history beyond the short window returned by the LibreView API. Data is
@@ -31,8 +40,7 @@ export class HistoryStore {
     async init(retentionDays) {
         let text;
         try {
-            const [ok, contents] = await this._file.load_contents_async(this._cancellable);
-            if (!ok) return;
+            const [contents] = await this._file.load_contents_async(this._cancellable);
             text = new TextDecoder().decode(contents);
         } catch (e) {
             if (!e.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.NOT_FOUND)) {
@@ -77,8 +85,7 @@ export class HistoryStore {
     // Reads all saved entries (used by the history view). Does not mutate state.
     async readAll() {
         try {
-            const [ok, contents] = await this._file.load_contents_async(this._cancellable);
-            if (!ok) return [];
+            const [contents] = await this._file.load_contents_async(this._cancellable);
             const text = new TextDecoder().decode(contents);
             const entries = [];
             for (const line of text.split('\n')) {
